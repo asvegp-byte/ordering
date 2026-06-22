@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equipment Selection &amp; Order Verification Flow — Aire Serv</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F2ED;
+    --card:#FCFBF8;
+    --ink:#16191C;
+    --ink-soft:#4A4F55;
+    --line:#CBC9C1;
+    --line-soft:#E0DED7;
+    --steel:#1F5C8B;      /* routing / decisions */
+    --steel-bg:#E8F0F6;
+    --stop:#B3401A;       /* hard stop gates */
+    --stop-bg:#FBEAE2;
+    --go:#2F6B3A;         /* release / confirmed */
+    --go-bg:#E6F0E7;
+    --amber:#9A6B12;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:38px 22px 80px;}
+
+  /* ---- header ---- */
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--steel);
+  }
+  h1{
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(28px,5vw,42px);
+    line-height:1.02;letter-spacing:-.02em;margin:.28em 0 .15em;
+  }
+  .sub{color:var(--ink-soft);font-size:15px;max-width:62ch;margin:0;}
+
+  /* ---- incident strip ---- */
+  .incidents{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:30px 0 8px;}
+  @media(max-width:620px){.incidents{grid-template-columns:1fr;}}
+  .incident{
+    background:var(--stop-bg);border:1px solid #E3B7A4;border-left:4px solid var(--stop);
+    border-radius:8px;padding:13px 15px;
+  }
+  .incident .tag{
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--stop);
+  }
+  .incident p{margin:5px 0 0;font-size:13.5px;color:#3a2a22;}
+  .incident b{color:var(--stop);}
+
+  /* ---- flow ---- */
+  .flow{margin-top:34px;position:relative;}
+  .node{position:relative;}
+  /* connector line between nodes */
+  .node:not(:last-child)::after{
+    content:"";position:absolute;left:30px;top:100%;width:2px;height:22px;
+    background:var(--line);
+  }
+  @media(max-width:620px){.node:not(:last-child)::after{left:22px;}}
+  .gap{height:22px;}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:11px;
+    padding:18px 20px 18px 64px;position:relative;
+    box-shadow:0 1px 0 rgba(0,0,0,.02);
+  }
+  @media(max-width:620px){.card{padding:16px 16px 16px 50px;}}
+  .num{
+    position:absolute;left:14px;top:17px;width:34px;height:34px;border-radius:8px;
+    background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;
+  }
+  @media(max-width:620px){.num{left:10px;width:28px;height:28px;font-size:13px;}}
+  .card h3{
+    font-family:'Archivo',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em;
+    margin:1px 0 2px;
+  }
+  .kind{
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+    display:inline-block;margin-bottom:8px;
+  }
+  .card p{margin:0;font-size:13.5px;color:var(--ink-soft);}
+  .out{
+    margin-top:11px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    color:var(--ink);background:var(--line-soft);border-radius:6px;
+    padding:6px 9px;display:inline-block;
+  }
+  .out b{color:var(--steel);}
+
+  /* branch chips for decision nodes */
+  .branches{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
+  .chip{
+    font-size:12px;font-weight:500;background:var(--steel-bg);color:#16435f;
+    border:1px solid #Bcd4e6;border-radius:20px;padding:4px 11px;
+  }
+  .chip b{font-weight:700;}
+
+  /* decision accent */
+  .card.decision{border-left:4px solid var(--steel);}
+  .card.decision .num{background:var(--steel);}
+  .card.decision .kind{color:var(--steel);}
+
+  /* hard stop accent */
+  .card.stop{border:1px solid #E0A98E;border-left:5px solid var(--stop);background:var(--stop-bg);}
+  .card.stop .num{background:var(--stop);}
+  .card.stop .kind{color:var(--stop);}
+  .card.stop h3{color:#7a2a10;}
+  .card.stop p{color:#5a3a2c;}
+  .stopflag{
+    position:absolute;right:16px;top:16px;font-family:'JetBrains Mono',monospace;
+    font-size:10px;font-weight:700;letter-spacing:.1em;color:#fff;background:var(--stop);
+    padding:3px 8px;border-radius:5px;
+  }
+  .checklist{list-style:none;margin:11px 0 0;padding:0;}
+  .checklist li{
+    font-size:13px;color:#5a3a2c;padding:3px 0 3px 23px;position:relative;
+  }
+  .checklist li::before{
+    content:"";position:absolute;left:0;top:5px;width:13px;height:13px;
+    border:1.5px solid var(--stop);border-radius:3px;background:#fff;
+  }
+  .checklist li b{color:#7a2a10;}
+
+  /* release node */
+  .card.release{border:1px solid #A9CBAE;border-left:5px solid var(--go);background:var(--go-bg);text-align:left;}
+  .card.release .num{background:var(--go);}
+  .card.release .kind{color:var(--go);}
+  .card.release h3{color:#1f4a28;}
+  .release-checks{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:11px;}
+  @media(max-width:620px){.release-checks{grid-template-columns:1fr;}}
+  .release-checks li{list-style:none;font-size:13px;color:#23502c;padding:3px 0 3px 22px;position:relative;}
+  .release-checks li::before{
+    content:"✓";position:absolute;left:0;top:1px;color:var(--go);font-weight:700;font-size:13px;
+  }
+
+  .note{
+    font-size:12.5px;color:var(--ink-soft);margin-top:9px;padding-top:9px;
+    border-top:1px dashed var(--line);
+  }
+  .note b{color:var(--ink);}
+
+  footer{margin-top:36px;text-align:center;font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--ink-soft);letter-spacing:.05em;}
+
+  @media print{
+    body{background:#fff;}
+    .card{box-shadow:none;break-inside:avoid;}
+    .node:not(:last-child)::after{height:14px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Aire Serv of East Glendale–Peoria · West Valley, AZ</div>
+  <h1>Equipment Selection &amp; Order Verification Flow</h1>
+  <p class="sub">Work top to bottom. Routing nodes pick your branch; the two red <b style="color:var(--stop)">HARD STOP</b> gates must be physically confirmed before any PO is released. No gate skipped, no order sent.</p>
+
+  <div class="incidents">
+    <div class="incident">
+      <div class="tag">Incident · resolved by Gate 6</div>
+      <p>Attic air handler ordered before <b>access opening was measured</b> — equipment would not fit through the attic entry.</p>
+    </div>
+    <div class="incident">
+      <div class="tag">Incident · resolved by Gate 5</div>
+      <p>Commercial unit ordered as single-phase when the building supplied <b>3-phase power</b> — wrong electrical spec.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+
+    <!-- 0 -->
+    <div class="node"><div class="card decision">
+      <div class="num">0</div>
+      <span class="kind">Route · Job context</span>
+      <h3>What kind of job is this?</h3>
+      <p>Sets which branches apply. <b>Commercial</b> automatically promotes Gate 5 (phase) to mandatory before anything else proceeds.</p>
+      <div class="branches">
+        <span class="chip"><b>Residential</b></span>
+        <span class="chip"><b>Commercial</b> → flag 3-phase check</span>
+        <span class="chip">Changeout</span>
+        <span class="chip">New install</span>
+        <span class="chip">Add-on / zone</span>
+      </div>
+    </div></div>
+
+    <!-- 1 -->
+    <div class="node"><div class="card">
+      <div class="num">1</div>
+      <span class="kind">Sizing</span>
+      <h3>Load &amp; tonnage</h3>
+      <p>Run the Manual J — don't blind-match the old unit's tonnage. Phoenix-tuned to ±10% so you don't oversize. Set the design airflow target (~400 CFM/ton) here; it drives blower and duct decisions later.</p>
+      <span class="out">OUTPUT → <b>Tonnage</b> + design <b>CFM</b></span>
+    </div></div>
+
+    <!-- 2 -->
+    <div class="node"><div class="card decision">
+      <div class="num">2</div>
+      <span class="kind">Route · Heating source</span>
+      <h3>How is the space heated?</h3>
+      <p>The heat source decides the indoor unit type — this is the first real fork.</p>
+      <div class="branches">
+        <span class="chip">Gas → <b>Condenser + Furnace + Coil</b></span>
+        <span class="chip">Electric → <b>Condenser + Air Handler</b> (heat kit)</span>
+        <span class="chip">Heat pump → <b>HP + Air Handler</b> (+aux)</span>
+        <span class="chip">Dual fuel → <b>HP + Furnace + Coil</b></span>
+      </div>
+      <span class="out">OUTPUT → Indoor unit type</span>
+    </div></div>
+
+    <!-- 3 -->
+    <div class="node"><div class="card decision">
+      <div class="num">3</div>
+      <span class="kind">Route · Configuration</span>
+      <h3>Split or packaged — and orientation?</h3>
+      <p>Split needs the indoor cabinet orientation locked; packaged needs the right package family and a curb/pad. Coil and blower orientation must match the airflow direction.</p>
+      <div class="branches">
+        <span class="chip"><b>Split</b> · upflow / downflow / horizontal L–R</span>
+        <span class="chip"><b>Packaged</b> · gas-elec / HP / straight-cool</span>
+        <span class="chip">Rooftop curb vs ground pad</span>
+      </div>
+      <span class="out">OUTPUT → Cabinet config + orientation</span>
+    </div></div>
+
+    <!-- 4 -->
+    <div class="node"><div class="card">
+      <div class="num">4</div>
+      <span class="kind">Verify · Match-up</span>
+      <h3>Refrigerant family + AHRI match</h3>
+      <p>Never mix refrigerant families — <b>R-410A</b> legacy and <b>A2L (R-32 / R-454B)</b> components are not interchangeable. Confirm the condenser + coil/air handler are a listed <b>AHRI-matched combination</b> (required for rated efficiency and warranty). A2L: confirm the RDS is present/required and check line-set reuse rules.</p>
+      <span class="out">OUTPUT → <b>AHRI ref #</b> + refrigerant family locked</span>
+    </div></div>
+
+    <!-- 5 HARD STOP -->
+    <div class="node"><div class="card stop">
+      <span class="stopflag">HARD STOP</span>
+      <div class="num">5</div>
+      <span class="kind">Gate · Electrical &amp; phase</span>
+      <h3>Confirm building power before ordering</h3>
+      <p>Check the <b>building's incoming service first</b>, then match the equipment to it — not the other way around.</p>
+      <ul class="checklist">
+        <li>Service is <b>single-phase 208–240V</b>, <b>3-phase 208/230V</b>, or <b>3-phase 460V</b> — verified at the panel</li>
+        <li>Ordered unit's nameplate phase + voltage <b>matches the building</b></li>
+        <li>MCA / MOCP read → disconnect, whip gauge, and breaker sized to match</li>
+      </ul>
+      <span class="out">OUTPUT → Confirmed <b>V / phase</b> + electrical BOM</span>
+    </div></div>
+
+    <!-- 6 HARD STOP -->
+    <div class="node"><div class="card stop">
+      <span class="stopflag">HARD STOP</span>
+      <div class="num">6</div>
+      <span class="kind">Gate · Physical access &amp; fit</span>
+      <h3>Will it physically get to where it lives?</h3>
+      <p>Where does the indoor unit sit — <b>attic, closet, garage, mech room, rooftop?</b> Measure before you order, pulling dimensions from the install survey.</p>
+      <ul class="checklist">
+        <li><b>Attic:</b> access opening W×H, narrowest point on the path, and every turn — vs each component's cabinet width (air handler / furnace / coil)</li>
+        <li><b>Closet / mech room:</b> door width + service clearances</li>
+        <li><b>Condenser:</b> pad space + setbacks; rooftop: curb match + crane/lift plan</li>
+      </ul>
+      <p class="note"><b>If it doesn't fit:</b> choose an alternate model / horizontal config, split into smaller components, or schedule enlarging the access — <b>before</b> the PO, not on install day.</p>
+      <span class="out">OUTPUT → Fit confirmed or alternate selected</span>
+    </div></div>
+
+    <!-- 7 -->
+    <div class="node"><div class="card">
+      <div class="num">7</div>
+      <span class="kind">Verify · Airflow</span>
+      <h3>Duct &amp; airflow compatibility</h3>
+      <p>Can the existing duct move the design CFM at acceptable static? Check return sizing, plenum/transition needs, and that the blower type (PSC vs ECM/variable) matches the staging you selected.</p>
+      <span class="out">OUTPUT → Blower + duct mods confirmed</span>
+    </div></div>
+
+    <!-- 8 -->
+    <div class="node"><div class="card">
+      <div class="num">8</div>
+      <span class="kind">Verify · Controls</span>
+      <h3>Thermostat &amp; control wiring</h3>
+      <p>Communicating vs conventional 24V. Confirm the existing wire count supports the system (e.g., the 5-wire run), and that the stat, inverter, and RDS are all compatible.</p>
+      <span class="out">OUTPUT → Stat + wire plan</span>
+    </div></div>
+
+    <!-- 9 -->
+    <div class="node"><div class="card">
+      <div class="num">9</div>
+      <span class="kind">Build · Bill of materials</span>
+      <h3>Accessory BOM — the things that get forgotten</h3>
+      <p>Line set (size + length), disconnect, whip, pad / straps, condensate (pump, primary + <b>secondary drain &amp; float switch</b>, secondary drain pan in attics per code), filter / rack, surge protector, thermostat, gas line + sizing, flue / vent category, plenum &amp; transition sheet metal.</p>
+      <span class="out">OUTPUT → Complete line-item BOM</span>
+    </div></div>
+
+    <!-- 10 RELEASE -->
+    <div class="node"><div class="card release">
+      <div class="num">✓</div>
+      <span class="kind">Gate · Pre-order release</span>
+      <h3>Final check before the PO goes out</h3>
+      <ul class="release-checks">
+        <li>AHRI-matched combo</li>
+        <li>Refrigerant family consistent</li>
+        <li>Phase + voltage confirmed</li>
+        <li>Fits the access path</li>
+        <li>Cabinet orientation correct</li>
+        <li>Full accessory BOM listed</li>
+        <li>Cross-checked vs pricebook</li>
+        <li>All gates signed off</li>
+      </ul>
+      <p class="note">All boxes checked → <b>release PO.</b> Any gap → back to the gate that failed.</p>
+    </div></div>
+
+  </div>
+
+  <footer>RYCHUS LLC · AIRE SERV · ORDER-VERIFICATION FLOW · v1</footer>
+
+</div>
+</body>
+</html>
