@@ -109,6 +109,12 @@
   .addcomp{margin-top:8px;font-size:12.5px;font-weight:600;background:#fff;
     border:1px dashed var(--steel-ln);color:var(--steel);border-radius:7px;padding:7px 13px;cursor:pointer;}
   .addcomp:hover{background:var(--steel-bg);}
+  .subhead{margin-top:18px;padding-top:14px;border-top:1px dashed var(--stop-ln);
+    font-family:'Archivo',sans-serif;font-weight:700;font-size:13px;color:#7a2a10;
+    letter-spacing:.02em;}
+  textarea{font-family:'Inter',sans-serif;font-size:13.5px;width:100%;padding:8px 10px;
+    border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);resize:vertical;}
+  textarea:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel);}
 
   /* status rail */
   .rail{position:sticky;top:18px;background:var(--card);border:1px solid var(--line);
@@ -279,7 +285,7 @@
         <!-- G6 hard stop fit -->
         <polygon class="hard" points="370,996 550,996 588,1036 550,1076 370,1076 332,1036"/>
         <text class="g" x="460" y="1026" text-anchor="middle" fill="#B3401A">GATE 6 · HARD STOP</text>
-        <text class="th" x="460" y="1044" text-anchor="middle">Access opening fit</text>
+        <text class="th" x="460" y="1044" text-anchor="middle">Opening fit + path</text>
         <line class="ln" x1="460" y1="1076" x2="460" y2="1112" marker-end="url(#arw)"/>
 
         <!-- G7 -->
@@ -425,9 +431,9 @@
         <!-- G6 HARD -->
         <div class="gate hard" id="g6">
           <div class="gnum">6</div>
-          <div class="gkind">Hard stop · Physical fit</div>
-          <h3>Access opening fit</h3>
-          <p class="lead">Every component has to clear the opening on its own. The tool rotates each piece both ways, so a long-narrow opening can pass a 21×32 furnace but block a 23×23 coil.</p>
+          <div class="gkind">Hard stop · Access &amp; path</div>
+          <h3>Opening fit + route to install point</h3>
+          <p class="lead">Two questions: does each piece clear the opening, and can it actually be carried to where it lives? The opening rotates both ways — a long-narrow opening can pass a 21×32 furnace but block a 23×23 coil.</p>
           <div class="field"><label>Install location</label>
             <select id="loc"><option value="">Select…</option>
               <option value="attic">Attic</option>
@@ -452,6 +458,28 @@
             <li><label><input type="checkbox" id="locClear"><span class="req">Pad / curb / clearance &amp; service access confirmed</span></label></li>
           </ul>
           <div class="verdict v-wait" id="v6"><span class="dot"></span><span>Select a location</span></div>
+
+          <div id="pathEval" style="display:none">
+            <div class="subhead">Path evaluation — beyond the opening</div>
+            <p class="lead" style="margin-bottom:8px">Flag anything on the route from the truck to the install point. Check what applies; flagged items need a note and a plan before the gate clears.</p>
+            <ul class="checks" id="pathRisks">
+              <li><label><input type="checkbox" class="prisk">Stairs / pull-down attic ladder</label></li>
+              <li><label><input type="checkbox" class="prisk">90° turns or tight corners on the path</label></li>
+              <li><label><input type="checkbox" class="prisk">Narrow doorway or hallway en route (separate from the opening)</label></li>
+              <li><label><input type="checkbox" class="prisk">Low overhead clearance — duct, soffit, joists, header</label></li>
+              <li><label><input type="checkbox" class="prisk">Long carry / limited staging or set-down space</label></li>
+              <li><label><input type="checkbox" class="prisk">Crane / lift required, or gated / narrow side-yard access</label></li>
+              <li><label><input type="checkbox" class="prisk">Needs partial disassembly, or removing a door / railing</label></li>
+            </ul>
+            <div class="field" id="pathNoteWrap" style="display:none">
+              <label>How is each flagged obstruction handled?</label>
+              <textarea id="pathNote" rows="2" placeholder="e.g. tilt coil through stair turn; remove handrail; 2-person carry + lift"></textarea>
+            </div>
+            <ul class="checks">
+              <li><label><input type="checkbox" id="pathOk"><span class="req" id="pathOkLabel">Route reviewed — no obstructions</span></label></li>
+            </ul>
+            <div class="verdict v-wait" id="vPath"><span class="dot"></span><span>Review the route</span></div>
+          </div>
         </div>
 
         <!-- G7 -->
@@ -517,7 +545,7 @@
           <li data-g="3"><span class="sdot"></span>3 · Config</li>
           <li data-g="4"><span class="sdot"></span>4 · AHRI match</li>
           <li data-g="5" class="hardg"><span class="sdot"></span>5 · Phase ⚠</li>
-          <li data-g="6" class="hardg"><span class="sdot"></span>6 · Access fit ⚠</li>
+          <li data-g="6" class="hardg"><span class="sdot"></span>6 · Access + path ⚠</li>
           <li data-g="7"><span class="sdot"></span>7 · Airflow</li>
           <li data-g="8"><span class="sdot"></span>8 · Controls</li>
           <li data-g="9"><span class="sdot"></span>9 · BOM</li>
@@ -565,8 +593,9 @@ document.querySelectorAll('.opts[data-single]').forEach(group=>{
 const $=id=>document.getElementById(id);
 ['jobNature','tonnage','cfm','orientation','ahriRef','refrig','rds','bldgPower','equipPower',
  'discSized','loc','opW','opH','clr','locClear','ductOk','blowerOk','statType','wireOk',
- 'bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
+ 'pathOk','pathNote','bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
 document.querySelectorAll('.bom').forEach(c=>c.addEventListener('input',onChange));
+document.querySelectorAll('.prisk').forEach(c=>c.addEventListener('input',onChange));
 
 const ORIENT={
   Split:['Upflow','Downflow','Horizontal — left','Horizontal — right'],
@@ -658,7 +687,7 @@ function onChange(){
     if(seededKey!==key || $('fitComponents').children.length===0){ seededKey=key; seedComponents(); }
   }
 
-  let g6=false;
+  let openingPass=false;
   if(!loc){ v6.className='verdict v-wait'; setMsg(v6,'Select a location'); }
   else if(needDims){
     const oW=+$('opW').value, oH=+$('opH').value, clr=$('clr').value===''?1:+$('clr').value;
@@ -677,11 +706,31 @@ function onChange(){
     });
     if(!oW||!oH||active===0||incomplete){ v6.className='verdict v-wait'; setMsg(v6,'Enter opening + each component face'); }
     else if(blocked.length){ v6.className='verdict v-fail'; setMsg(v6,`WON'T FIT through ${oW}×${oH}: ${blocked.join(', ')}. Re-spec or enlarge.`); }
-    else { v6.className='verdict v-pass'; setMsg(v6,`ALL ${active} CLEAR opening ${oW}×${oH} (+${clr}″)`); g6=true; }
+    else { v6.className='verdict v-pass'; setMsg(v6,`ALL ${active} CLEAR opening ${oW}×${oH} (+${clr}″)`); openingPass=true; }
   } else {
-    if($('locClear').checked){ v6.className='verdict v-pass'; setMsg(v6,'Clearance / pad / curb confirmed'); g6=true; }
+    if($('locClear').checked){ v6.className='verdict v-pass'; setMsg(v6,'Clearance / pad / curb confirmed'); openingPass=true; }
     else { v6.className='verdict v-wait'; setMsg(v6,'Confirm clearance / pad / curb'); }
   }
+
+  // ---- Gate 6 · path evaluation ----
+  const vPath=$('vPath');
+  $('pathEval').style.display = loc ? 'block':'none';
+  const risks=[...document.querySelectorAll('.prisk')].filter(c=>c.checked);
+  const anyRisk=risks.length>0;
+  $('pathNoteWrap').style.display = anyRisk ? 'block':'none';
+  $('pathOkLabel').textContent = anyRisk ? 'Mitigation planned for every flagged obstruction' : 'Route reviewed — no obstructions';
+  let pathPass=false;
+  if(!loc){ vPath.className='verdict v-wait'; setMsg(vPath,'Review the route'); }
+  else if(anyRisk){
+    const noted=$('pathNote').value.trim()!=='';
+    if(noted && $('pathOk').checked){ vPath.className='verdict v-pass'; setMsg(vPath,`${risks.length} obstruction(s) flagged — mitigation noted`); pathPass=true; }
+    else { vPath.className='verdict v-fail'; setMsg(vPath,`${risks.length} obstruction(s) flagged — add a note + confirm the plan`); }
+  } else {
+    if($('pathOk').checked){ vPath.className='verdict v-pass'; setMsg(vPath,'Route clear — no obstructions'); pathPass=true; }
+    else { vPath.className='verdict v-wait'; setMsg(vPath,'Confirm the route is clear'); }
+  }
+
+  const g6 = openingPass && pathPass;
 
   // ---- per-gate completion ----
   const done={
@@ -723,7 +772,7 @@ function release(){
     ['Config', `${S.config} · ${$('orientation').value}`],
     ['AHRI ref', `${$('ahriRef').value} · ${$('refrig').value}`],
     ['Electrical', `${label($('bldgPower').value)} <span class="sumpass">✓ matched</span>`],
-    ['Access fit', `${$('loc').value} <span class="sumpass">✓ confirmed</span>`],
+    ['Access + path', `${$('loc').value} <span class="sumpass">✓ fit + route cleared</span>`],
     ['Controls', `${$('statType').value}`],
     ['Gates', `<span class="sumpass">10 / 10 cleared ✓</span>`]
   ];
@@ -735,6 +784,7 @@ function release(){
 
 function resetAll(){
   document.querySelectorAll('#run input').forEach(i=>{ if(i.type==='checkbox')i.checked=false; else i.value=''; i.removeAttribute('data-touched'); });
+  document.querySelectorAll('#run textarea').forEach(t=>t.value='');
   document.querySelectorAll('#run select').forEach(s=>s.selectedIndex=0);
   document.querySelectorAll('.opt[aria-pressed]').forEach(o=>o.setAttribute('aria-pressed','false'));
   S.jobType=S.heating=S.config=null;
