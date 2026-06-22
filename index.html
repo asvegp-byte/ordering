@@ -93,6 +93,23 @@
 
   .hint{font-size:12px;color:var(--ink-soft);margin-top:7px;}
 
+  .complabels{display:grid;grid-template-columns:1fr 64px 14px 64px 22px 30px;gap:7px;
+    font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);margin:10px 0 2px;padding:0 2px;}
+  .complabels span:nth-child(2),.complabels span:nth-child(4){text-align:center;}
+  .comp{display:grid;grid-template-columns:1fr 64px 14px 64px 22px 30px;gap:7px;align-items:center;margin:5px 0;}
+  .comp .times{text-align:center;color:var(--ink-soft);font-size:13px;}
+  .comp input{padding:7px 8px;}
+  .comp .cBadge{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;text-align:center;}
+  .comp .cBadge.ok{color:var(--go);}
+  .comp .cBadge.bad{color:var(--stop);}
+  .comp .cDel{border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;
+    color:var(--ink-soft);height:32px;font-size:15px;line-height:1;padding:0;}
+  .comp .cDel:hover{border-color:var(--stop);color:var(--stop);}
+  .addcomp{margin-top:8px;font-size:12.5px;font-weight:600;background:#fff;
+    border:1px dashed var(--steel-ln);color:var(--steel);border-radius:7px;padding:7px 13px;cursor:pointer;}
+  .addcomp:hover{background:var(--steel-bg);}
+
   /* status rail */
   .rail{position:sticky;top:18px;background:var(--card);border:1px solid var(--line);
     border-radius:12px;padding:18px;}
@@ -410,7 +427,7 @@
           <div class="gnum">6</div>
           <div class="gkind">Hard stop · Physical fit</div>
           <h3>Access opening fit</h3>
-          <p class="lead">Where does the indoor unit live, and does it physically get there?</p>
+          <p class="lead">Every component has to clear the opening on its own. The tool rotates each piece both ways, so a long-narrow opening can pass a 21×32 furnace but block a 23×23 coil.</p>
           <div class="field"><label>Install location</label>
             <select id="loc"><option value="">Select…</option>
               <option value="attic">Attic</option>
@@ -422,14 +439,14 @@
 
           <div id="fitDims" style="display:none">
             <div class="row">
-              <div class="field"><label>Access opening — width (in)</label><input type="number" id="opW" placeholder="e.g. 22"></div>
-              <div class="field"><label>Access opening — height (in)</label><input type="number" id="opH" placeholder="e.g. 30"></div>
+              <div class="field"><label>Opening — width (in)</label><input type="number" id="opW" placeholder="e.g. 22"></div>
+              <div class="field"><label>Opening — length (in)</label><input type="number" id="opH" placeholder="e.g. 30"></div>
+              <div class="field" style="max-width:118px"><label>Clearance (in)</label><input type="number" id="clr" value="1" step="0.5" min="0"></div>
             </div>
-            <div class="row">
-              <div class="field"><label>Largest component — width (in)</label><input type="number" id="cmW" placeholder="cabinet"></div>
-              <div class="field"><label>Largest component — height (in)</label><input type="number" id="cmH" placeholder="cabinet"></div>
-            </div>
-            <p class="hint">Compares against the install survey measurements. Needs ≥1″ clearance each way.</p>
+            <div class="complabels"><span>Component</span><span>W</span><span></span><span>D</span><span>fit</span><span></span></div>
+            <div id="fitComponents"></div>
+            <button class="addcomp" id="addComp" type="button">+ Add component</button>
+            <p class="hint">Enter each piece's pass-through face — the cabinet cross-section fed through the hole (width × depth), not its height along the path. Pieces seed from the system type; add or remove as needed.</p>
           </div>
           <ul class="checks" id="fitConfirm" style="display:none">
             <li><label><input type="checkbox" id="locClear"><span class="req">Pad / curb / clearance &amp; service access confirmed</span></label></li>
@@ -547,7 +564,7 @@ document.querySelectorAll('.opts[data-single]').forEach(group=>{
 
 const $=id=>document.getElementById(id);
 ['jobNature','tonnage','cfm','orientation','ahriRef','refrig','rds','bldgPower','equipPower',
- 'discSized','loc','opW','opH','cmW','cmH','locClear','ductOk','blowerOk','statType','wireOk',
+ 'discSized','loc','opW','opH','clr','locClear','ductOk','blowerOk','statType','wireOk',
  'bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
 document.querySelectorAll('.bom').forEach(c=>c.addEventListener('input',onChange));
 
@@ -557,6 +574,39 @@ const ORIENT={
 };
 const INDOOR={Gas:'Condenser + furnace + cased coil',Electric:'Condenser + air handler (heat kit)',
   HeatPump:'Heat-pump condenser + air handler',DualFuel:'HP condenser + furnace + coil'};
+
+// components that travel through the access opening, by system type
+const SYSTEM_COMPONENTS={
+  Gas:['Furnace','Evaporator coil'], DualFuel:['Furnace','Evaporator coil'],
+  Electric:['Air handler'], HeatPump:['Air handler']
+};
+let seededKey='';
+
+function compRow(name){
+  const div=document.createElement('div'); div.className='comp';
+  div.innerHTML=`<input type="text" class="cName" value="${name||''}" placeholder="Component">`
+    +`<input type="number" class="cA" placeholder="W">`
+    +`<span class="times">×</span>`
+    +`<input type="number" class="cB" placeholder="D">`
+    +`<span class="cBadge"></span>`
+    +`<button type="button" class="cDel" title="Remove">×</button>`;
+  div.querySelectorAll('input').forEach(i=>i.addEventListener('input',onChange));
+  div.querySelector('.cDel').addEventListener('click',()=>{div.remove();onChange();});
+  return div;
+}
+function seedComponents(){
+  const wrap=$('fitComponents'); wrap.innerHTML='';
+  (SYSTEM_COMPONENTS[S.heating]||['Indoor unit']).forEach(n=>wrap.appendChild(compRow(n)));
+}
+$('addComp').addEventListener('click',()=>{$('fitComponents').appendChild(compRow(''));});
+// each piece fits if either orientation clears the opening + clearance
+function fitsThrough(a,b,oW,oH,clr){
+  return (a+clr<=oW && b+clr<=oH) || (b+clr<=oW && a+clr<=oH);
+}
+function setMsg(v,txt){ v.querySelector('span:last-child').textContent=txt; }
+function makeBadge(r){ const s=document.createElement('span'); s.className='cBadge';
+  r.insertBefore(s, r.querySelector('.cDel')); return s; }
+
 
 function onChange(){
   // commercial flag
@@ -601,16 +651,36 @@ function onChange(){
   const needDims = (loc==='attic'||loc==='interior'||loc==='mech');
   $('fitDims').style.display = needDims?'block':'none';
   $('fitConfirm').style.display = (loc && !needDims)?'block':'none';
+
+  // seed component rows when system type changes (or first time dims show)
+  if(needDims){
+    const key=S.heating||'unknown';
+    if(seededKey!==key || $('fitComponents').children.length===0){ seededKey=key; seedComponents(); }
+  }
+
   let g6=false;
-  if(!loc){ v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Select a location'; }
+  if(!loc){ v6.className='verdict v-wait'; setMsg(v6,'Select a location'); }
   else if(needDims){
-    const oW=+$('opW').value,oH=+$('opH').value,cW=+$('cmW').value,cH=+$('cmH').value;
-    if(!oW||!oH||!cW||!cH){ v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Enter opening + component dimensions'; }
-    else if(oW>=cW+1 && oH>=cH+1){ v6.className='verdict v-pass'; v6.querySelector('span:last-child').textContent=`FITS — opening ${oW}×${oH} vs component ${cW}×${cH}`; g6=true; }
-    else { v6.className='verdict v-fail'; v6.querySelector('span:last-child').textContent=`WON'T FIT — opening ${oW}×${oH} vs component ${cW}×${cH}. Re-spec or enlarge.`; }
+    const oW=+$('opW').value, oH=+$('opH').value, clr=$('clr').value===''?1:+$('clr').value;
+    const rows=[...$('fitComponents').querySelectorAll('.comp')];
+    let active=0, incomplete=false, blocked=[];
+    rows.forEach(r=>{
+      const a=+r.querySelector('.cA').value, b=+r.querySelector('.cB').value;
+      const nm=r.querySelector('.cName').value.trim()||'Component';
+      const badge=r.querySelector('.cBadge')||makeBadge(r);
+      const named=r.querySelector('.cName').value.trim()!=='';
+      if(!a&&!b&&!named){ badge.textContent=''; badge.className='cBadge'; return; }
+      active++;
+      if(!a||!b||!oW||!oH){ badge.textContent='–'; badge.className='cBadge'; incomplete=true; return; }
+      if(fitsThrough(a,b,oW,oH,clr)){ badge.textContent='✓'; badge.className='cBadge ok'; }
+      else { badge.textContent='✗'; badge.className='cBadge bad'; blocked.push(`${nm} ${a}×${b}`); }
+    });
+    if(!oW||!oH||active===0||incomplete){ v6.className='verdict v-wait'; setMsg(v6,'Enter opening + each component face'); }
+    else if(blocked.length){ v6.className='verdict v-fail'; setMsg(v6,`WON'T FIT through ${oW}×${oH}: ${blocked.join(', ')}. Re-spec or enlarge.`); }
+    else { v6.className='verdict v-pass'; setMsg(v6,`ALL ${active} CLEAR opening ${oW}×${oH} (+${clr}″)`); g6=true; }
   } else {
-    if($('locClear').checked){ v6.className='verdict v-pass'; v6.querySelector('span:last-child').textContent='Clearance / pad / curb confirmed'; g6=true; }
-    else { v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Confirm clearance / pad / curb'; }
+    if($('locClear').checked){ v6.className='verdict v-pass'; setMsg(v6,'Clearance / pad / curb confirmed'); g6=true; }
+    else { v6.className='verdict v-wait'; setMsg(v6,'Confirm clearance / pad / curb'); }
   }
 
   // ---- per-gate completion ----
@@ -668,6 +738,8 @@ function resetAll(){
   document.querySelectorAll('#run select').forEach(s=>s.selectedIndex=0);
   document.querySelectorAll('.opt[aria-pressed]').forEach(o=>o.setAttribute('aria-pressed','false'));
   S.jobType=S.heating=S.config=null;
+  $('clr').value='1';
+  $('fitComponents').innerHTML=''; seededKey='';
   $('summary').classList.remove('show');
   onChange();
 }
