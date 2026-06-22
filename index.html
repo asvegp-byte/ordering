@@ -3,158 +3,138 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Equipment Selection &amp; Order Verification Flow — Aire Serv</title>
+<title>Equipment Order Verification — Aire Serv</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#F4F2ED;
-    --card:#FCFBF8;
-    --ink:#16191C;
-    --ink-soft:#4A4F55;
-    --line:#CBC9C1;
-    --line-soft:#E0DED7;
-    --steel:#1F5C8B;      /* routing / decisions */
-    --steel-bg:#E8F0F6;
-    --stop:#B3401A;       /* hard stop gates */
-    --stop-bg:#FBEAE2;
-    --go:#2F6B3A;         /* release / confirmed */
-    --go-bg:#E6F0E7;
-    --amber:#9A6B12;
+    --paper:#F4F2ED; --card:#FCFBF8; --ink:#16191C; --ink-soft:#4A4F55;
+    --line:#CBC9C1; --line-soft:#E2E0D9;
+    --steel:#1F5C8B; --steel-bg:#E8F0F6; --steel-ln:#BcD4E6;
+    --stop:#B3401A; --stop-bg:#FBEAE2; --stop-ln:#E0A98E;
+    --go:#2F6B3A; --go-bg:#E6F0E7; --go-ln:#A9CBAE;
+    --pending:#B6B3AA;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;background:var(--paper);color:var(--ink);
-    font-family:'Inter',system-ui,sans-serif;line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:920px;margin:0 auto;padding:38px 22px 80px;}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 22px 90px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--steel);}
+  h1{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(26px,4.6vw,40px);
+    line-height:1.03;letter-spacing:-.02em;margin:.28em 0 .12em;}
+  .sub{color:var(--ink-soft);font-size:15px;max-width:64ch;margin:0;}
 
-  /* ---- header ---- */
-  .eyebrow{
-    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
-    letter-spacing:.18em;text-transform:uppercase;color:var(--steel);
-  }
-  h1{
-    font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(28px,5vw,42px);
-    line-height:1.02;letter-spacing:-.02em;margin:.28em 0 .15em;
-  }
-  .sub{color:var(--ink-soft);font-size:15px;max-width:62ch;margin:0;}
+  /* tabs */
+  .tabs{display:inline-flex;gap:4px;background:#E6E3DB;border-radius:11px;padding:4px;margin:26px 0 4px;}
+  .tab{font-family:'Archivo',sans-serif;font-weight:700;font-size:14px;border:0;cursor:pointer;
+    background:transparent;color:var(--ink-soft);padding:9px 18px;border-radius:8px;transition:.15s;}
+  .tab[aria-selected="true"]{background:var(--ink);color:#fff;}
+  .panel{display:none;}
+  .panel.active{display:block;}
 
-  /* ---- incident strip ---- */
-  .incidents{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:30px 0 8px;}
-  @media(max-width:620px){.incidents{grid-template-columns:1fr;}}
-  .incident{
-    background:var(--stop-bg);border:1px solid #E3B7A4;border-left:4px solid var(--stop);
-    border-radius:8px;padding:13px 15px;
-  }
-  .incident .tag{
-    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
-    letter-spacing:.12em;text-transform:uppercase;color:var(--stop);
-  }
-  .incident p{margin:5px 0 0;font-size:13.5px;color:#3a2a22;}
-  .incident b{color:var(--stop);}
+  /* ---------- flowchart ---------- */
+  .chartwrap{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin-top:18px;overflow-x:auto;}
+  .chartwrap svg{display:block;width:100%;min-width:680px;height:auto;font-family:'Inter',sans-serif;}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:12.5px;color:var(--ink-soft);}
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .swatch{width:15px;height:15px;border-radius:4px;border:1px solid var(--line);}
+  .start-cta{margin-top:18px;}
 
-  /* ---- flow ---- */
-  .flow{margin-top:34px;position:relative;}
-  .node{position:relative;}
-  /* connector line between nodes */
-  .node:not(:last-child)::after{
-    content:"";position:absolute;left:30px;top:100%;width:2px;height:22px;
-    background:var(--line);
-  }
-  @media(max-width:620px){.node:not(:last-child)::after{left:22px;}}
-  .gap{height:22px;}
+  /* ---------- tool ---------- */
+  .tool{display:grid;grid-template-columns:1fr 290px;gap:24px;margin-top:20px;align-items:start;}
+  @media(max-width:860px){.tool{grid-template-columns:1fr;}}
 
-  .card{
-    background:var(--card);border:1px solid var(--line);border-radius:11px;
-    padding:18px 20px 18px 64px;position:relative;
-    box-shadow:0 1px 0 rgba(0,0,0,.02);
-  }
-  @media(max-width:620px){.card{padding:16px 16px 16px 50px;}}
-  .num{
-    position:absolute;left:14px;top:17px;width:34px;height:34px;border-radius:8px;
+  .gate{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px 16px 60px;position:relative;margin-bottom:16px;}
+  .gate .gnum{position:absolute;left:14px;top:16px;width:32px;height:32px;border-radius:8px;
     background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
-    font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;
-  }
-  @media(max-width:620px){.num{left:10px;width:28px;height:28px;font-size:13px;}}
-  .card h3{
-    font-family:'Archivo',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em;
-    margin:1px 0 2px;
-  }
-  .kind{
-    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
-    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
-    display:inline-block;margin-bottom:8px;
-  }
-  .card p{margin:0;font-size:13.5px;color:var(--ink-soft);}
-  .out{
-    margin-top:11px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
-    color:var(--ink);background:var(--line-soft);border-radius:6px;
-    padding:6px 9px;display:inline-block;
-  }
-  .out b{color:var(--steel);}
+    font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;}
+  .gate .gkind{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);}
+  .gate h3{font-family:'Archivo',sans-serif;font-weight:700;font-size:16px;margin:1px 0 3px;letter-spacing:-.01em;}
+  .gate p.lead{margin:0 0 11px;font-size:13px;color:var(--ink-soft);}
+  .gate.hard{border:1px solid var(--stop-ln);border-left:5px solid var(--stop);background:var(--stop-bg);}
+  .gate.hard .gnum{background:var(--stop);}
+  .gate.hard .gkind{color:var(--stop);}
+  .gate.hard h3{color:#7a2a10;}
 
-  /* branch chips for decision nodes */
-  .branches{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;}
-  .chip{
-    font-size:12px;font-weight:500;background:var(--steel-bg);color:#16435f;
-    border:1px solid #Bcd4e6;border-radius:20px;padding:4px 11px;
-  }
-  .chip b{font-weight:700;}
+  .field{margin:9px 0;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+  select,input[type=text],input[type=number]{font-family:'Inter',sans-serif;font-size:13.5px;
+    width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);}
+  select:focus,input:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel);}
+  .row{display:flex;gap:10px;}
+  .row .field{flex:1;}
 
-  /* decision accent */
-  .card.decision{border-left:4px solid var(--steel);}
-  .card.decision .num{background:var(--steel);}
-  .card.decision .kind{color:var(--steel);}
+  .opts{display:flex;flex-wrap:wrap;gap:7px;}
+  .opt{font-size:12.5px;font-weight:500;border:1px solid var(--steel-ln);background:#fff;color:#16435f;
+    border-radius:20px;padding:6px 13px;cursor:pointer;user-select:none;transition:.12s;}
+  .opt[aria-pressed="true"]{background:var(--steel);color:#fff;border-color:var(--steel);}
 
-  /* hard stop accent */
-  .card.stop{border:1px solid #E0A98E;border-left:5px solid var(--stop);background:var(--stop-bg);}
-  .card.stop .num{background:var(--stop);}
-  .card.stop .kind{color:var(--stop);}
-  .card.stop h3{color:#7a2a10;}
-  .card.stop p{color:#5a3a2c;}
-  .stopflag{
-    position:absolute;right:16px;top:16px;font-family:'JetBrains Mono',monospace;
-    font-size:10px;font-weight:700;letter-spacing:.1em;color:#fff;background:var(--stop);
-    padding:3px 8px;border-radius:5px;
-  }
-  .checklist{list-style:none;margin:11px 0 0;padding:0;}
-  .checklist li{
-    font-size:13px;color:#5a3a2c;padding:3px 0 3px 23px;position:relative;
-  }
-  .checklist li::before{
-    content:"";position:absolute;left:0;top:5px;width:13px;height:13px;
-    border:1.5px solid var(--stop);border-radius:3px;background:#fff;
-  }
-  .checklist li b{color:#7a2a10;}
+  .checks{list-style:none;margin:6px 0 0;padding:0;}
+  .checks li{margin:5px 0;}
+  .checks label{display:flex;gap:9px;align-items:flex-start;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;}
+  .checks input{margin-top:2px;width:15px;height:15px;accent-color:var(--steel);flex:none;}
+  .checks .req{color:var(--stop);font-weight:700;}
 
-  /* release node */
-  .card.release{border:1px solid #A9CBAE;border-left:5px solid var(--go);background:var(--go-bg);text-align:left;}
-  .card.release .num{background:var(--go);}
-  .card.release .kind{color:var(--go);}
-  .card.release h3{color:#1f4a28;}
-  .release-checks{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:11px;}
-  @media(max-width:620px){.release-checks{grid-template-columns:1fr;}}
-  .release-checks li{list-style:none;font-size:13px;color:#23502c;padding:3px 0 3px 22px;position:relative;}
-  .release-checks li::before{
-    content:"✓";position:absolute;left:0;top:1px;color:var(--go);font-weight:700;font-size:13px;
-  }
+  .derived{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    background:var(--line-soft);border-radius:6px;padding:7px 10px;color:var(--ink);}
+  .derived b{color:var(--steel);}
 
-  .note{
-    font-size:12.5px;color:var(--ink-soft);margin-top:9px;padding-top:9px;
-    border-top:1px dashed var(--line);
-  }
-  .note b{color:var(--ink);}
+  .verdict{margin-top:11px;border-radius:8px;padding:9px 12px;font-weight:700;font-size:13px;
+    display:flex;align-items:center;gap:8px;font-family:'Archivo',sans-serif;letter-spacing:.01em;}
+  .verdict.v-wait{background:#EDEBE4;color:var(--ink-soft);}
+  .verdict.v-pass{background:var(--go-bg);color:var(--go);border:1px solid var(--go-ln);}
+  .verdict.v-fail{background:var(--stop-bg);color:var(--stop);border:1px solid var(--stop-ln);}
+  .verdict .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none;}
 
-  footer{margin-top:36px;text-align:center;font-family:'JetBrains Mono',monospace;
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:7px;}
+
+  /* status rail */
+  .rail{position:sticky;top:18px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:18px;}
+  .rail h4{font-family:'Archivo',sans-serif;font-size:13px;font-weight:800;letter-spacing:.04em;
+    text-transform:uppercase;margin:0 0 12px;color:var(--ink);}
+  .railgates{list-style:none;margin:0 0 16px;padding:0;}
+  .railgates li{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:4px 0;color:var(--ink-soft);}
+  .sdot{width:11px;height:11px;border-radius:50%;background:var(--pending);flex:none;border:1px solid rgba(0,0,0,.08);}
+  .sdot.ok{background:var(--go);}
+  .sdot.bad{background:var(--stop);}
+  .railgates li.done{color:var(--ink);font-weight:600;}
+  .railgates li.hardg{font-weight:700;}
+
+  .release{width:100%;font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;
+    border:0;border-radius:10px;padding:13px;cursor:pointer;color:#fff;background:var(--go);transition:.15s;}
+  .release:disabled{background:#C9C6BD;cursor:not-allowed;}
+  .relnote{font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+  .railbtns{display:flex;gap:8px;margin-top:10px;}
+  .railbtns button{flex:1;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
+    background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;color:var(--ink-soft);}
+  .railbtns button:hover{border-color:var(--steel);color:var(--steel);}
+
+  /* summary */
+  #summary{display:none;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px;margin-top:8px;}
+  #summary.show{display:block;}
+  #summary h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:18px;margin:0 0 4px;}
+  #summary .stamp{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);margin-bottom:14px;}
+  .sumgrid{display:grid;grid-template-columns:160px 1fr;gap:6px 14px;font-size:13px;}
+  .sumgrid dt{font-weight:600;color:var(--ink-soft);}
+  .sumgrid dd{margin:0;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+  .sumpass{color:var(--go);font-weight:700;}
+
+  footer{margin-top:38px;text-align:center;font-family:'JetBrains Mono',monospace;
     font-size:11px;color:var(--ink-soft);letter-spacing:.05em;}
 
   @media print{
     body{background:#fff;}
-    .card{box-shadow:none;break-inside:avoid;}
-    .node:not(:last-child)::after{height:14px;}
+    .tabs,.chartwrap,.tool .gate,.rail,.start-cta,.legend,.sub,.eyebrow,h1{display:none;}
+    .panel{display:none!important;}
+    #summary{display:block!important;border:none;padding:0;}
+    .tool{display:block;}
   }
 </style>
 </head>
@@ -162,164 +142,536 @@
 <div class="wrap">
 
   <div class="eyebrow">Aire Serv of East Glendale–Peoria · West Valley, AZ</div>
-  <h1>Equipment Selection &amp; Order Verification Flow</h1>
-  <p class="sub">Work top to bottom. Routing nodes pick your branch; the two red <b style="color:var(--stop)">HARD STOP</b> gates must be physically confirmed before any PO is released. No gate skipped, no order sent.</p>
+  <h1>Equipment Order Verification</h1>
+  <p class="sub">Map view shows the full decision path. Run a job to make the selections live — the two red gates won't pass until phase and access fit are confirmed, and the PO can't release until every gate is green.</p>
 
-  <div class="incidents">
-    <div class="incident">
-      <div class="tag">Incident · resolved by Gate 6</div>
-      <p>Attic air handler ordered before <b>access opening was measured</b> — equipment would not fit through the attic entry.</p>
-    </div>
-    <div class="incident">
-      <div class="tag">Incident · resolved by Gate 5</div>
-      <p>Commercial unit ordered as single-phase when the building supplied <b>3-phase power</b> — wrong electrical spec.</p>
-    </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="chart">Flowchart</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="run">Run verification</button>
   </div>
 
-  <div class="flow">
+  <!-- ===================== FLOWCHART ===================== -->
+  <section class="panel active" id="chart">
+    <div class="chartwrap">
+      <svg viewBox="0 0 920 1500" role="img" aria-label="Equipment selection decision flowchart">
+        <defs>
+          <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#7d7a72"/>
+          </marker>
+          <marker id="arwR" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#B3401A"/>
+          </marker>
+        </defs>
+        <style>
+          .ln{stroke:#7d7a72;stroke-width:1.6;fill:none;}
+          .lnR{stroke:#B3401A;stroke-width:2;fill:none;}
+          .proc{fill:#FCFBF8;stroke:#CBC9C1;stroke-width:1.4;}
+          .dec{fill:#E8F0F6;stroke:#1F5C8B;stroke-width:1.6;}
+          .term{fill:#1F5C8B;}
+          .end{fill:#2F6B3A;}
+          .hard{fill:#FBEAE2;stroke:#B3401A;stroke-width:2;}
+          .opt{fill:#fff;stroke:#BcD4E6;stroke-width:1.2;}
+          .t{font-size:12.5px;fill:#16191C;}
+          .tw{font-size:12.5px;fill:#fff;font-weight:700;}
+          .td{font-size:12.5px;fill:#16435f;font-weight:600;}
+          .th{font-size:12.5px;fill:#7a2a10;font-weight:700;}
+          .lbl{font-size:11px;fill:#6b6860;font-style:italic;}
+          .g{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;fill:#9a978e;}
+        </style>
 
-    <!-- 0 -->
-    <div class="node"><div class="card decision">
-      <div class="num">0</div>
-      <span class="kind">Route · Job context</span>
-      <h3>What kind of job is this?</h3>
-      <p>Sets which branches apply. <b>Commercial</b> automatically promotes Gate 5 (phase) to mandatory before anything else proceeds.</p>
-      <div class="branches">
-        <span class="chip"><b>Residential</b></span>
-        <span class="chip"><b>Commercial</b> → flag 3-phase check</span>
-        <span class="chip">Changeout</span>
-        <span class="chip">New install</span>
-        <span class="chip">Add-on / zone</span>
+        <!-- START -->
+        <rect class="term" x="385" y="18" width="150" height="38" rx="19"/>
+        <text class="tw" x="460" y="42" text-anchor="middle">START — new order</text>
+        <line class="ln" x1="460" y1="56" x2="460" y2="92" marker-end="url(#arw)"/>
+
+        <!-- D0 job type -->
+        <polygon class="dec" points="460,98 552,142 460,186 368,142"/>
+        <text class="g" x="460" y="134" text-anchor="middle">GATE 0</text>
+        <text class="td" x="460" y="150" text-anchor="middle">Job type?</text>
+        <!-- branches -->
+        <path class="ln" d="M368,142 H300 V214" marker-end="url(#arw)"/>
+        <path class="ln" d="M552,142 H636 V214" marker-end="url(#arw)"/>
+        <rect class="opt" x="218" y="216" width="164" height="40" rx="8"/>
+        <text class="t" x="300" y="240" text-anchor="middle">Residential</text>
+        <rect class="opt" x="520" y="216" width="232" height="40" rx="8"/>
+        <text class="th" x="636" y="240" text-anchor="middle">Commercial → 3-phase req'd</text>
+        <path class="ln" d="M300,256 V282 H452" marker-end="url(#arw)"/>
+        <path class="ln" d="M636,256 V282 H468" marker-end="url(#arw)"/>
+
+        <!-- G1 sizing -->
+        <rect class="proc" x="300" y="284" width="320" height="50" rx="9"/>
+        <text class="g" x="316" y="304" >GATE 1</text>
+        <text class="t" x="460" y="307" text-anchor="middle">Manual J → set tonnage</text>
+        <text class="t" x="460" y="324" text-anchor="middle">+ design CFM (~400/ton)</text>
+        <line class="ln" x1="460" y1="334" x2="460" y2="372" marker-end="url(#arw)"/>
+
+        <!-- D2 heating -->
+        <polygon class="dec" points="460,376 566,424 460,472 354,424"/>
+        <text class="g" x="460" y="416" text-anchor="middle">GATE 2</text>
+        <text class="td" x="460" y="432" text-anchor="middle">Heat source?</text>
+        <!-- 4 branch boxes -->
+        <path class="ln" d="M460,472 V492 H120 V512" marker-end="url(#arw)"/>
+        <path class="ln" d="M460,472 V492 H340 V512" marker-end="url(#arw)"/>
+        <path class="ln" d="M460,472 V492 H580 V512" marker-end="url(#arw)"/>
+        <path class="ln" d="M460,472 V492 H800 V512" marker-end="url(#arw)"/>
+        <rect class="opt" x="36" y="514" width="168" height="48" rx="8"/>
+        <text class="t" x="120" y="534" text-anchor="middle">Gas</text>
+        <text class="lbl" x="120" y="551" text-anchor="middle">Cond + Furnace + Coil</text>
+        <rect class="opt" x="256" y="514" width="168" height="48" rx="8"/>
+        <text class="t" x="340" y="534" text-anchor="middle">Electric</text>
+        <text class="lbl" x="340" y="551" text-anchor="middle">Cond + Air Handler</text>
+        <rect class="opt" x="496" y="514" width="168" height="48" rx="8"/>
+        <text class="t" x="580" y="534" text-anchor="middle">Heat Pump</text>
+        <text class="lbl" x="580" y="551" text-anchor="middle">HP + Air Handler</text>
+        <rect class="opt" x="716" y="514" width="168" height="48" rx="8"/>
+        <text class="t" x="800" y="534" text-anchor="middle">Dual Fuel</text>
+        <text class="lbl" x="800" y="551" text-anchor="middle">HP + Furnace + Coil</text>
+        <path class="ln" d="M120,562 V586 H452" marker-end="url(#arw)"/>
+        <path class="ln" d="M340,562 V586 H452"/>
+        <path class="ln" d="M580,562 V586 H468"/>
+        <path class="ln" d="M800,562 V586 H468" marker-end="url(#arw)"/>
+
+        <!-- D3 config -->
+        <polygon class="dec" points="460,592 552,636 460,680 368,636"/>
+        <text class="g" x="460" y="628" text-anchor="middle">GATE 3</text>
+        <text class="td" x="460" y="644" text-anchor="middle">Config?</text>
+        <path class="ln" d="M368,636 H266 V710" marker-end="url(#arw)"/>
+        <path class="ln" d="M552,636 H654 V710" marker-end="url(#arw)"/>
+        <rect class="opt" x="160" y="712" width="212" height="46" rx="8"/>
+        <text class="t" x="266" y="731" text-anchor="middle">Split</text>
+        <text class="lbl" x="266" y="748" text-anchor="middle">up / down / horizontal</text>
+        <rect class="opt" x="548" y="712" width="212" height="46" rx="8"/>
+        <text class="t" x="654" y="731" text-anchor="middle">Packaged</text>
+        <text class="lbl" x="654" y="748" text-anchor="middle">gas-elec / HP / cool</text>
+        <path class="ln" d="M266,758 V784 H452" marker-end="url(#arw)"/>
+        <path class="ln" d="M654,758 V784 H468" marker-end="url(#arw)"/>
+
+        <!-- G4 match -->
+        <rect class="proc" x="290" y="786" width="340" height="50" rx="9"/>
+        <text class="g" x="306" y="806">GATE 4</text>
+        <text class="t" x="460" y="809" text-anchor="middle">AHRI-matched combo +</text>
+        <text class="t" x="460" y="826" text-anchor="middle">refrigerant family locked</text>
+        <line class="ln" x1="460" y1="836" x2="460" y2="872" marker-end="url(#arwR)"/>
+
+        <!-- G5 hard stop phase -->
+        <polygon class="hard" points="370,876 550,876 588,916 550,956 370,956 332,916"/>
+        <text class="g" x="460" y="906" text-anchor="middle" fill="#B3401A">GATE 5 · HARD STOP</text>
+        <text class="th" x="460" y="924" text-anchor="middle">Phase + voltage match</text>
+        <line class="lnR" x1="460" y1="956" x2="460" y2="992" marker-end="url(#arwR)"/>
+
+        <!-- G6 hard stop fit -->
+        <polygon class="hard" points="370,996 550,996 588,1036 550,1076 370,1076 332,1036"/>
+        <text class="g" x="460" y="1026" text-anchor="middle" fill="#B3401A">GATE 6 · HARD STOP</text>
+        <text class="th" x="460" y="1044" text-anchor="middle">Access opening fit</text>
+        <line class="ln" x1="460" y1="1076" x2="460" y2="1112" marker-end="url(#arw)"/>
+
+        <!-- G7 -->
+        <rect class="proc" x="320" y="1114" width="280" height="44" rx="9"/>
+        <text class="g" x="336" y="1133">GATE 7</text>
+        <text class="t" x="460" y="1142" text-anchor="middle">Airflow &amp; duct OK</text>
+        <line class="ln" x1="460" y1="1158" x2="460" y2="1188" marker-end="url(#arw)"/>
+        <!-- G8 -->
+        <rect class="proc" x="320" y="1190" width="280" height="44" rx="9"/>
+        <text class="g" x="336" y="1209">GATE 8</text>
+        <text class="t" x="460" y="1218" text-anchor="middle">Controls / thermostat</text>
+        <line class="ln" x1="460" y1="1234" x2="460" y2="1264" marker-end="url(#arw)"/>
+        <!-- G9 -->
+        <rect class="proc" x="320" y="1266" width="280" height="44" rx="9"/>
+        <text class="g" x="336" y="1285">GATE 9</text>
+        <text class="t" x="460" y="1294" text-anchor="middle">Accessory BOM complete</text>
+        <line class="ln" x1="460" y1="1310" x2="460" y2="1340" marker-end="url(#arw)"/>
+        <!-- END -->
+        <rect class="end" x="358" y="1342" width="204" height="44" rx="22"/>
+        <text class="tw" x="460" y="1369" text-anchor="middle">GATE 10 · RELEASE PO</text>
+      </svg>
+      <div class="legend">
+        <span><span class="swatch" style="background:#E8F0F6;border-color:#1F5C8B"></span>Routing decision</span>
+        <span><span class="swatch" style="background:#FCFBF8"></span>Verify step</span>
+        <span><span class="swatch" style="background:#FBEAE2;border-color:#B3401A"></span>Hard stop</span>
+        <span><span class="swatch" style="background:#2F6B3A;border-color:#2F6B3A"></span>Release</span>
       </div>
-    </div></div>
+    </div>
+    <div class="start-cta">
+      <button class="release" style="width:auto;padding:13px 26px" onclick="goRun()">Run verification →</button>
+    </div>
+  </section>
 
-    <!-- 1 -->
-    <div class="node"><div class="card">
-      <div class="num">1</div>
-      <span class="kind">Sizing</span>
-      <h3>Load &amp; tonnage</h3>
-      <p>Run the Manual J — don't blind-match the old unit's tonnage. Phoenix-tuned to ±10% so you don't oversize. Set the design airflow target (~400 CFM/ton) here; it drives blower and duct decisions later.</p>
-      <span class="out">OUTPUT → <b>Tonnage</b> + design <b>CFM</b></span>
-    </div></div>
+  <!-- ===================== TOOL ===================== -->
+  <section class="panel" id="run">
+    <div class="tool">
+      <div class="cards">
 
-    <!-- 2 -->
-    <div class="node"><div class="card decision">
-      <div class="num">2</div>
-      <span class="kind">Route · Heating source</span>
-      <h3>How is the space heated?</h3>
-      <p>The heat source decides the indoor unit type — this is the first real fork.</p>
-      <div class="branches">
-        <span class="chip">Gas → <b>Condenser + Furnace + Coil</b></span>
-        <span class="chip">Electric → <b>Condenser + Air Handler</b> (heat kit)</span>
-        <span class="chip">Heat pump → <b>HP + Air Handler</b> (+aux)</span>
-        <span class="chip">Dual fuel → <b>HP + Furnace + Coil</b></span>
+        <!-- G0 -->
+        <div class="gate" id="g0">
+          <div class="gnum">0</div>
+          <div class="gkind">Route · Job context</div>
+          <h3>Job type</h3>
+          <div class="opts" data-single="jobType">
+            <div class="opt" data-val="Residential">Residential</div>
+            <div class="opt" data-val="Commercial">Commercial</div>
+          </div>
+          <div class="field" style="margin-top:11px">
+            <label>Nature</label>
+            <select id="jobNature">
+              <option value="">Select…</option>
+              <option>Changeout</option><option>New install</option><option>Add-on / zone</option>
+            </select>
+          </div>
+          <div class="hint" id="commFlag" style="display:none;color:var(--stop);font-weight:600">
+            Commercial — confirm 3-phase service at Gate 5 before ordering.</div>
+        </div>
+
+        <!-- G1 -->
+        <div class="gate" id="g1">
+          <div class="gnum">1</div>
+          <div class="gkind">Sizing</div>
+          <h3>Load &amp; tonnage</h3>
+          <p class="lead">Run the Manual J — don't blind-match the old unit. Phoenix ±10%.</p>
+          <div class="row">
+            <div class="field"><label>Tonnage</label>
+              <input type="number" id="tonnage" step="0.5" min="1" max="25" placeholder="e.g. 4"></div>
+            <div class="field"><label>Design CFM</label>
+              <input type="number" id="cfm" placeholder="auto"></div>
+          </div>
+          <div class="derived" id="cfmDerived">Target airflow → enter tonnage</div>
+        </div>
+
+        <!-- G2 -->
+        <div class="gate" id="g2">
+          <div class="gnum">2</div>
+          <div class="gkind">Route · Heating source</div>
+          <h3>Heat source → indoor unit</h3>
+          <div class="opts" data-single="heating">
+            <div class="opt" data-val="Gas">Gas furnace</div>
+            <div class="opt" data-val="Electric">Electric heat</div>
+            <div class="opt" data-val="HeatPump">Heat pump</div>
+            <div class="opt" data-val="DualFuel">Dual fuel</div>
+          </div>
+          <div class="derived" id="indoorDerived">Indoor unit → select a source</div>
+        </div>
+
+        <!-- G3 -->
+        <div class="gate" id="g3">
+          <div class="gnum">3</div>
+          <div class="gkind">Route · Configuration</div>
+          <h3>Split or packaged</h3>
+          <div class="opts" data-single="config">
+            <div class="opt" data-val="Split">Split</div>
+            <div class="opt" data-val="Packaged">Packaged</div>
+          </div>
+          <div class="field" style="margin-top:11px" id="orientWrap">
+            <label>Orientation / package family</label>
+            <select id="orientation"><option value="">Select…</option></select>
+          </div>
+        </div>
+
+        <!-- G4 -->
+        <div class="gate" id="g4">
+          <div class="gnum">4</div>
+          <div class="gkind">Verify · Match-up</div>
+          <h3>AHRI match + refrigerant family</h3>
+          <div class="field"><label>AHRI matched-combination ref #</label>
+            <input type="text" id="ahriRef" placeholder="from AHRI directory"></div>
+          <div class="field"><label>Refrigerant family</label>
+            <select id="refrig"><option value="">Select…</option>
+              <option value="R410A">R-410A (legacy)</option>
+              <option value="A2L">A2L — R-32 / R-454B</option></select></div>
+          <ul class="checks" id="rdsWrap" style="display:none">
+            <li><label><input type="checkbox" id="rds"><span class="req">RDS present / required for A2L confirmed</span></label></li>
+          </ul>
+        </div>
+
+        <!-- G5 HARD -->
+        <div class="gate hard" id="g5">
+          <div class="gnum">5</div>
+          <div class="gkind">Hard stop · Electrical</div>
+          <h3>Phase &amp; voltage match</h3>
+          <p class="lead">Read the building service first, then match the equipment to it.</p>
+          <div class="row">
+            <div class="field"><label>Building service</label>
+              <select id="bldgPower"><option value="">Select…</option>
+                <option value="1p208">1Ø · 208–240V</option>
+                <option value="3p230">3Ø · 208–230V</option>
+                <option value="3p460">3Ø · 460V</option></select></div>
+            <div class="field"><label>Equipment nameplate</label>
+              <select id="equipPower"><option value="">Select…</option>
+                <option value="1p208">1Ø · 208–240V</option>
+                <option value="3p230">3Ø · 208–230V</option>
+                <option value="3p460">3Ø · 460V</option></select></div>
+          </div>
+          <ul class="checks">
+            <li><label><input type="checkbox" id="discSized"><span class="req">MCA / MOCP read → disconnect, whip &amp; breaker sized</span></label></li>
+          </ul>
+          <div class="verdict v-wait" id="v5"><span class="dot"></span><span>Select both to compare</span></div>
+        </div>
+
+        <!-- G6 HARD -->
+        <div class="gate hard" id="g6">
+          <div class="gnum">6</div>
+          <div class="gkind">Hard stop · Physical fit</div>
+          <h3>Access opening fit</h3>
+          <p class="lead">Where does the indoor unit live, and does it physically get there?</p>
+          <div class="field"><label>Install location</label>
+            <select id="loc"><option value="">Select…</option>
+              <option value="attic">Attic</option>
+              <option value="interior">Closet / interior</option>
+              <option value="mech">Mechanical room</option>
+              <option value="garage">Garage</option>
+              <option value="rooftop">Rooftop</option>
+              <option value="ground">Ground / exterior pad</option></select></div>
+
+          <div id="fitDims" style="display:none">
+            <div class="row">
+              <div class="field"><label>Access opening — width (in)</label><input type="number" id="opW" placeholder="e.g. 22"></div>
+              <div class="field"><label>Access opening — height (in)</label><input type="number" id="opH" placeholder="e.g. 30"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Largest component — width (in)</label><input type="number" id="cmW" placeholder="cabinet"></div>
+              <div class="field"><label>Largest component — height (in)</label><input type="number" id="cmH" placeholder="cabinet"></div>
+            </div>
+            <p class="hint">Compares against the install survey measurements. Needs ≥1″ clearance each way.</p>
+          </div>
+          <ul class="checks" id="fitConfirm" style="display:none">
+            <li><label><input type="checkbox" id="locClear"><span class="req">Pad / curb / clearance &amp; service access confirmed</span></label></li>
+          </ul>
+          <div class="verdict v-wait" id="v6"><span class="dot"></span><span>Select a location</span></div>
+        </div>
+
+        <!-- G7 -->
+        <div class="gate" id="g7">
+          <div class="gnum">7</div>
+          <div class="gkind">Verify · Airflow</div>
+          <h3>Duct &amp; airflow</h3>
+          <ul class="checks">
+            <li><label><input type="checkbox" id="ductOk">Existing duct moves design CFM at acceptable static (return / plenum / transition checked)</label></li>
+            <li><label><input type="checkbox" id="blowerOk">Blower type (PSC / ECM) matches the selected staging</label></li>
+          </ul>
+        </div>
+
+        <!-- G8 -->
+        <div class="gate" id="g8">
+          <div class="gnum">8</div>
+          <div class="gkind">Verify · Controls</div>
+          <h3>Thermostat &amp; wiring</h3>
+          <div class="field"><label>Control type</label>
+            <select id="statType"><option value="">Select…</option>
+              <option>Conventional 24V</option><option>Communicating</option></select></div>
+          <ul class="checks">
+            <li><label><input type="checkbox" id="wireOk">Wire count supports system; stat / inverter / RDS compatible</label></li>
+          </ul>
+        </div>
+
+        <!-- G9 -->
+        <div class="gate" id="g9">
+          <div class="gnum">9</div>
+          <div class="gkind">Build · Bill of materials</div>
+          <h3>Accessory BOM</h3>
+          <ul class="checks" id="bomList">
+            <li><label><input type="checkbox" class="bom">Line set (size + length)</label></li>
+            <li><label><input type="checkbox" class="bom">Disconnect + whip</label></li>
+            <li><label><input type="checkbox" class="bom">Pad / straps / curb</label></li>
+            <li><label><input type="checkbox" class="bom">Condensate: pump, primary + secondary drain, float switch</label></li>
+            <li><label><input type="checkbox" class="bom" id="bomPan">Secondary drain pan <span id="panReq" style="display:none" class="req">(required — attic)</span></label></li>
+            <li><label><input type="checkbox" class="bom">Filter / rack, surge protector</label></li>
+            <li><label><input type="checkbox" class="bom">Thermostat</label></li>
+            <li><label><input type="checkbox" class="bom" id="bomGas">Gas line + sizing / flue / vent category <span id="gasReq" style="display:none" class="req">(furnace)</span></label></li>
+            <li><label><input type="checkbox" class="bom">Plenum / transition sheet metal</label></li>
+          </ul>
+          <ul class="checks" style="margin-top:8px;border-top:1px dashed var(--line);padding-top:8px">
+            <li><label><input type="checkbox" id="bomDone"><b>BOM reviewed &amp; complete</b></label></li>
+          </ul>
+        </div>
+
+        <div id="summary">
+          <h3>Order verification — cleared</h3>
+          <div class="stamp" id="sumStamp"></div>
+          <dl class="sumgrid" id="sumGrid"></dl>
+        </div>
+
       </div>
-      <span class="out">OUTPUT → Indoor unit type</span>
-    </div></div>
 
-    <!-- 3 -->
-    <div class="node"><div class="card decision">
-      <div class="num">3</div>
-      <span class="kind">Route · Configuration</span>
-      <h3>Split or packaged — and orientation?</h3>
-      <p>Split needs the indoor cabinet orientation locked; packaged needs the right package family and a curb/pad. Coil and blower orientation must match the airflow direction.</p>
-      <div class="branches">
-        <span class="chip"><b>Split</b> · upflow / downflow / horizontal L–R</span>
-        <span class="chip"><b>Packaged</b> · gas-elec / HP / straight-cool</span>
-        <span class="chip">Rooftop curb vs ground pad</span>
-      </div>
-      <span class="out">OUTPUT → Cabinet config + orientation</span>
-    </div></div>
+      <!-- STATUS RAIL -->
+      <aside class="rail">
+        <h4>Order status</h4>
+        <ul class="railgates" id="rail">
+          <li data-g="0"><span class="sdot"></span>0 · Job context</li>
+          <li data-g="1"><span class="sdot"></span>1 · Sizing</li>
+          <li data-g="2"><span class="sdot"></span>2 · Heat source</li>
+          <li data-g="3"><span class="sdot"></span>3 · Config</li>
+          <li data-g="4"><span class="sdot"></span>4 · AHRI match</li>
+          <li data-g="5" class="hardg"><span class="sdot"></span>5 · Phase ⚠</li>
+          <li data-g="6" class="hardg"><span class="sdot"></span>6 · Access fit ⚠</li>
+          <li data-g="7"><span class="sdot"></span>7 · Airflow</li>
+          <li data-g="8"><span class="sdot"></span>8 · Controls</li>
+          <li data-g="9"><span class="sdot"></span>9 · BOM</li>
+        </ul>
+        <button class="release" id="releaseBtn" disabled onclick="release()">Release PO</button>
+        <div class="relnote" id="relNote">Clear all 10 gates to release.</div>
+        <div class="railbtns">
+          <button onclick="window.print()">Print sheet</button>
+          <button onclick="resetAll()">Reset</button>
+        </div>
+      </aside>
+    </div>
+  </section>
 
-    <!-- 4 -->
-    <div class="node"><div class="card">
-      <div class="num">4</div>
-      <span class="kind">Verify · Match-up</span>
-      <h3>Refrigerant family + AHRI match</h3>
-      <p>Never mix refrigerant families — <b>R-410A</b> legacy and <b>A2L (R-32 / R-454B)</b> components are not interchangeable. Confirm the condenser + coil/air handler are a listed <b>AHRI-matched combination</b> (required for rated efficiency and warranty). A2L: confirm the RDS is present/required and check line-set reuse rules.</p>
-      <span class="out">OUTPUT → <b>AHRI ref #</b> + refrigerant family locked</span>
-    </div></div>
-
-    <!-- 5 HARD STOP -->
-    <div class="node"><div class="card stop">
-      <span class="stopflag">HARD STOP</span>
-      <div class="num">5</div>
-      <span class="kind">Gate · Electrical &amp; phase</span>
-      <h3>Confirm building power before ordering</h3>
-      <p>Check the <b>building's incoming service first</b>, then match the equipment to it — not the other way around.</p>
-      <ul class="checklist">
-        <li>Service is <b>single-phase 208–240V</b>, <b>3-phase 208/230V</b>, or <b>3-phase 460V</b> — verified at the panel</li>
-        <li>Ordered unit's nameplate phase + voltage <b>matches the building</b></li>
-        <li>MCA / MOCP read → disconnect, whip gauge, and breaker sized to match</li>
-      </ul>
-      <span class="out">OUTPUT → Confirmed <b>V / phase</b> + electrical BOM</span>
-    </div></div>
-
-    <!-- 6 HARD STOP -->
-    <div class="node"><div class="card stop">
-      <span class="stopflag">HARD STOP</span>
-      <div class="num">6</div>
-      <span class="kind">Gate · Physical access &amp; fit</span>
-      <h3>Will it physically get to where it lives?</h3>
-      <p>Where does the indoor unit sit — <b>attic, closet, garage, mech room, rooftop?</b> Measure before you order, pulling dimensions from the install survey.</p>
-      <ul class="checklist">
-        <li><b>Attic:</b> access opening W×H, narrowest point on the path, and every turn — vs each component's cabinet width (air handler / furnace / coil)</li>
-        <li><b>Closet / mech room:</b> door width + service clearances</li>
-        <li><b>Condenser:</b> pad space + setbacks; rooftop: curb match + crane/lift plan</li>
-      </ul>
-      <p class="note"><b>If it doesn't fit:</b> choose an alternate model / horizontal config, split into smaller components, or schedule enlarging the access — <b>before</b> the PO, not on install day.</p>
-      <span class="out">OUTPUT → Fit confirmed or alternate selected</span>
-    </div></div>
-
-    <!-- 7 -->
-    <div class="node"><div class="card">
-      <div class="num">7</div>
-      <span class="kind">Verify · Airflow</span>
-      <h3>Duct &amp; airflow compatibility</h3>
-      <p>Can the existing duct move the design CFM at acceptable static? Check return sizing, plenum/transition needs, and that the blower type (PSC vs ECM/variable) matches the staging you selected.</p>
-      <span class="out">OUTPUT → Blower + duct mods confirmed</span>
-    </div></div>
-
-    <!-- 8 -->
-    <div class="node"><div class="card">
-      <div class="num">8</div>
-      <span class="kind">Verify · Controls</span>
-      <h3>Thermostat &amp; control wiring</h3>
-      <p>Communicating vs conventional 24V. Confirm the existing wire count supports the system (e.g., the 5-wire run), and that the stat, inverter, and RDS are all compatible.</p>
-      <span class="out">OUTPUT → Stat + wire plan</span>
-    </div></div>
-
-    <!-- 9 -->
-    <div class="node"><div class="card">
-      <div class="num">9</div>
-      <span class="kind">Build · Bill of materials</span>
-      <h3>Accessory BOM — the things that get forgotten</h3>
-      <p>Line set (size + length), disconnect, whip, pad / straps, condensate (pump, primary + <b>secondary drain &amp; float switch</b>, secondary drain pan in attics per code), filter / rack, surge protector, thermostat, gas line + sizing, flue / vent category, plenum &amp; transition sheet metal.</p>
-      <span class="out">OUTPUT → Complete line-item BOM</span>
-    </div></div>
-
-    <!-- 10 RELEASE -->
-    <div class="node"><div class="card release">
-      <div class="num">✓</div>
-      <span class="kind">Gate · Pre-order release</span>
-      <h3>Final check before the PO goes out</h3>
-      <ul class="release-checks">
-        <li>AHRI-matched combo</li>
-        <li>Refrigerant family consistent</li>
-        <li>Phase + voltage confirmed</li>
-        <li>Fits the access path</li>
-        <li>Cabinet orientation correct</li>
-        <li>Full accessory BOM listed</li>
-        <li>Cross-checked vs pricebook</li>
-        <li>All gates signed off</li>
-      </ul>
-      <p class="note">All boxes checked → <b>release PO.</b> Any gap → back to the gate that failed.</p>
-    </div></div>
-
-  </div>
-
-  <footer>RYCHUS LLC · AIRE SERV · ORDER-VERIFICATION FLOW · v1</footer>
-
+  <footer>RYCHUS LLC · AIRE SERV · ORDER-VERIFICATION TOOL · v2</footer>
 </div>
+
+<script>
+const S = {jobType:null, heating:null, config:null};
+
+// ---- tabs ----
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));
+  t.setAttribute('aria-selected','true');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(t.dataset.tab).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}));
+function goRun(){document.querySelector('.tab[data-tab="run"]').click();}
+
+// ---- pill selectors ----
+document.querySelectorAll('.opts[data-single]').forEach(group=>{
+  const key=group.dataset.single;
+  group.querySelectorAll('.opt').forEach(opt=>{
+    opt.setAttribute('aria-pressed','false');
+    opt.addEventListener('click',()=>{
+      group.querySelectorAll('.opt').forEach(o=>o.setAttribute('aria-pressed','false'));
+      opt.setAttribute('aria-pressed','true');
+      S[key]=opt.dataset.val;
+      onChange();
+    });
+  });
+});
+
+const $=id=>document.getElementById(id);
+['jobNature','tonnage','cfm','orientation','ahriRef','refrig','rds','bldgPower','equipPower',
+ 'discSized','loc','opW','opH','cmW','cmH','locClear','ductOk','blowerOk','statType','wireOk',
+ 'bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
+document.querySelectorAll('.bom').forEach(c=>c.addEventListener('input',onChange));
+
+const ORIENT={
+  Split:['Upflow','Downflow','Horizontal — left','Horizontal — right'],
+  Packaged:['Gas / electric package','Heat pump package','Straight-cool package']
+};
+const INDOOR={Gas:'Condenser + furnace + cased coil',Electric:'Condenser + air handler (heat kit)',
+  HeatPump:'Heat-pump condenser + air handler',DualFuel:'HP condenser + furnace + coil'};
+
+function onChange(){
+  // commercial flag
+  $('commFlag').style.display = S.jobType==='Commercial' ? 'block':'none';
+
+  // CFM derive
+  const ton=parseFloat($('tonnage').value);
+  if(ton>0){
+    if(!$('cfm').dataset.touched){ $('cfm').value=Math.round(ton*400); }
+    $('cfmDerived').innerHTML=`Tonnage <b>${ton}</b> → target <b>${$('cfm').value||Math.round(ton*400)} CFM</b> (~400/ton)`;
+  } else { $('cfmDerived').textContent='Target airflow → enter tonnage'; }
+
+  // indoor unit derive
+  $('indoorDerived').innerHTML = S.heating ? `Indoor unit → <b>${INDOOR[S.heating]}</b>` : 'Indoor unit → select a source';
+
+  // orientation options
+  const oSel=$('orientation');
+  if(S.config && oSel.dataset.cfg!==S.config){
+    oSel.dataset.cfg=S.config; oSel.innerHTML='<option value="">Select…</option>';
+    ORIENT[S.config].forEach(o=>{const op=document.createElement('option');op.textContent=o;oSel.appendChild(op);});
+  }
+
+  // A2L → RDS
+  $('rdsWrap').style.display = $('refrig').value==='A2L' ? 'block':'none';
+
+  // gas/pan requirement flags in BOM
+  const furnace = S.heating==='Gas'||S.heating==='DualFuel';
+  $('gasReq').style.display = furnace?'inline':'none';
+  $('panReq').style.display = ($('loc').value==='attic')?'inline':'none';
+
+  // ---- Gate 5 verdict ----
+  const bp=$('bldgPower').value, ep=$('equipPower').value, v5=$('v5');
+  let g5=false;
+  if(!bp||!ep){ v5.className='verdict v-wait'; v5.querySelector('span:last-child').textContent='Select both to compare'; }
+  else if(bp===ep){
+    if($('discSized').checked){ v5.className='verdict v-pass'; v5.querySelector('span:last-child').textContent='MATCH — '+label(bp)+' · electrical sized'; g5=true; }
+    else { v5.className='verdict v-wait'; v5.querySelector('span:last-child').textContent='Match — confirm disconnect / breaker sizing'; }
+  } else { v5.className='verdict v-fail'; v5.querySelector('span:last-child').textContent='MISMATCH — building '+label(bp)+' ≠ equipment '+label(ep); }
+
+  // ---- Gate 6 verdict ----
+  const loc=$('loc').value, v6=$('v6');
+  const needDims = (loc==='attic'||loc==='interior'||loc==='mech');
+  $('fitDims').style.display = needDims?'block':'none';
+  $('fitConfirm').style.display = (loc && !needDims)?'block':'none';
+  let g6=false;
+  if(!loc){ v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Select a location'; }
+  else if(needDims){
+    const oW=+$('opW').value,oH=+$('opH').value,cW=+$('cmW').value,cH=+$('cmH').value;
+    if(!oW||!oH||!cW||!cH){ v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Enter opening + component dimensions'; }
+    else if(oW>=cW+1 && oH>=cH+1){ v6.className='verdict v-pass'; v6.querySelector('span:last-child').textContent=`FITS — opening ${oW}×${oH} vs component ${cW}×${cH}`; g6=true; }
+    else { v6.className='verdict v-fail'; v6.querySelector('span:last-child').textContent=`WON'T FIT — opening ${oW}×${oH} vs component ${cW}×${cH}. Re-spec or enlarge.`; }
+  } else {
+    if($('locClear').checked){ v6.className='verdict v-pass'; v6.querySelector('span:last-child').textContent='Clearance / pad / curb confirmed'; g6=true; }
+    else { v6.className='verdict v-wait'; v6.querySelector('span:last-child').textContent='Confirm clearance / pad / curb'; }
+  }
+
+  // ---- per-gate completion ----
+  const done={
+    0:!!S.jobType && $('jobNature').value!=='',
+    1:ton>0,
+    2:!!S.heating,
+    3:!!S.config && $('orientation').value!=='',
+    4:$('ahriRef').value.trim()!=='' && $('refrig').value!=='' && ($('refrig').value!=='A2L' || $('rds').checked),
+    5:g5,
+    6:g6,
+    7:$('ductOk').checked && $('blowerOk').checked,
+    8:$('statType').value!=='' && $('wireOk').checked,
+    9:furnace ? ($('bomGas').checked && $('bomDone').checked) : $('bomDone').checked
+  };
+  if(loc==='attic'){ done[9]=done[9] && $('bomPan').checked; }
+
+  // paint rail
+  let allDone=true;
+  document.querySelectorAll('#rail li').forEach(li=>{
+    const g=+li.dataset.g, dot=li.querySelector('.sdot');
+    dot.className='sdot';
+    const isFail=(g===5 && (v5.classList.contains('v-fail'))) || (g===6 && v6.classList.contains('v-fail'));
+    if(done[g]){ dot.classList.add('ok'); li.classList.add('done'); }
+    else { li.classList.remove('done'); if(isFail) dot.classList.add('bad'); allDone=false; }
+  });
+
+  $('releaseBtn').disabled=!allDone;
+  $('relNote').textContent = allDone ? 'All gates clear — release the PO.' : 'Clear all 10 gates to release.';
+}
+$('cfm').addEventListener('input',()=>{$('cfm').dataset.touched='1';});
+
+function label(v){return {'1p208':'1Ø 208–240V','3p230':'3Ø 208–230V','3p460':'3Ø 460V'}[v]||v;}
+
+function release(){
+  const rows=[
+    ['Job', `${S.jobType} · ${$('jobNature').value}`],
+    ['Tonnage / CFM', `${$('tonnage').value} ton · ${$('cfm').value} CFM`],
+    ['System', `${INDOOR[S.heating]}`],
+    ['Config', `${S.config} · ${$('orientation').value}`],
+    ['AHRI ref', `${$('ahriRef').value} · ${$('refrig').value}`],
+    ['Electrical', `${label($('bldgPower').value)} <span class="sumpass">✓ matched</span>`],
+    ['Access fit', `${$('loc').value} <span class="sumpass">✓ confirmed</span>`],
+    ['Controls', `${$('statType').value}`],
+    ['Gates', `<span class="sumpass">10 / 10 cleared ✓</span>`]
+  ];
+  $('sumGrid').innerHTML=rows.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
+  $('sumStamp').textContent='Cleared '+new Date().toLocaleString();
+  $('summary').classList.add('show');
+  $('summary').scrollIntoView({behavior:'smooth'});
+}
+
+function resetAll(){
+  document.querySelectorAll('#run input').forEach(i=>{ if(i.type==='checkbox')i.checked=false; else i.value=''; i.removeAttribute('data-touched'); });
+  document.querySelectorAll('#run select').forEach(s=>s.selectedIndex=0);
+  document.querySelectorAll('.opt[aria-pressed]').forEach(o=>o.setAttribute('aria-pressed','false'));
+  S.jobType=S.heating=S.config=null;
+  $('summary').classList.remove('show');
+  onChange();
+}
+onChange();
+</script>
 </body>
 </html>
