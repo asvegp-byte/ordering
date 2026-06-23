@@ -752,9 +752,9 @@ function onChange(){
 
   // ---- Gate 6 · condenser discharge & clearance ----
   const vCond=$('vCond'), dt=$('discType').value, pt=$('placeTight').value;
-  $('condEval').style.display = S.config ? 'block':'none';
-  let condPass=true; // n/a until a config (outdoor unit) is known
-  if(S.config){
+  $('condEval').style.display = loc ? 'block':'none';
+  let condPass = !loc; // n/a until a location is chosen (gate is pending anyway)
+  if(loc){
     // adaptive confirm label
     let lbl='Clearances confirmed per spec';
     if(dt==='vertical') lbl='Overhead + coil-intake clearances meet spec';
@@ -828,7 +828,7 @@ function release(){
     ['AHRI ref', `${$('ahriRef').value} · ${$('refrig').value}`],
     ['Electrical', `${label($('bldgPower').value)} <span class="sumpass">✓ matched</span>`],
     ['Access + path', `${$('loc').value} <span class="sumpass">✓ fit + route cleared</span>`],
-    ['Condenser', S.config ? `${$('discType').value||'—'} discharge · ${$('placeTight').value||'—'} <span class="sumpass">✓</span>` : '—'],
+    ['Condenser', `${$('discType').value||'—'} discharge · ${$('placeTight').value||'—'} <span class="sumpass">✓</span>`],
     ['Controls', `${$('statType').value}`],
     ['Gates', `<span class="sumpass">10 / 10 cleared ✓</span>`]
   ];
