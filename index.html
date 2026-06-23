@@ -285,7 +285,7 @@
         <!-- G6 hard stop fit -->
         <polygon class="hard" points="370,996 550,996 588,1036 550,1076 370,1076 332,1036"/>
         <text class="g" x="460" y="1026" text-anchor="middle" fill="#B3401A">GATE 6 · HARD STOP</text>
-        <text class="th" x="460" y="1044" text-anchor="middle">Opening fit + path</text>
+        <text class="th" x="460" y="1044" text-anchor="middle">Fit · path · discharge</text>
         <line class="ln" x1="460" y1="1076" x2="460" y2="1112" marker-end="url(#arw)"/>
 
         <!-- G7 -->
@@ -480,6 +480,26 @@
             </ul>
             <div class="verdict v-wait" id="vPath"><span class="dot"></span><span>Review the route</span></div>
           </div>
+
+          <div id="condEval" style="display:none">
+            <div class="subhead">Condenser discharge &amp; clearance</div>
+            <p class="lead" style="margin-bottom:8px">Side discharge into a confined space recirculates hot air. Confirm the discharge works in the planned spot before ordering.</p>
+            <div class="row">
+              <div class="field"><label>Discharge type</label>
+                <select id="discType"><option value="">Select…</option>
+                  <option value="vertical">Vertical / top</option>
+                  <option value="horizontal">Horizontal / side</option></select></div>
+              <div class="field"><label>Placement</label>
+                <select id="placeTight"><option value="">Select…</option>
+                  <option value="open">Open — ample clearance</option>
+                  <option value="tight">Tight — confined side-yard / near wall</option></select></div>
+            </div>
+            <div class="hint" id="discRec" style="display:none"></div>
+            <ul class="checks">
+              <li><label><input type="checkbox" id="discOk"><span class="req" id="discOkLabel">Clearances confirmed per spec</span></label></li>
+            </ul>
+            <div class="verdict v-wait" id="vCond"><span class="dot"></span><span>Select discharge type &amp; placement</span></div>
+          </div>
         </div>
 
         <!-- G7 -->
@@ -593,7 +613,7 @@ document.querySelectorAll('.opts[data-single]').forEach(group=>{
 const $=id=>document.getElementById(id);
 ['jobNature','tonnage','cfm','orientation','ahriRef','refrig','rds','bldgPower','equipPower',
  'discSized','loc','opW','opH','clr','locClear','ductOk','blowerOk','statType','wireOk',
- 'pathOk','pathNote','bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
+ 'pathOk','pathNote','discType','placeTight','discOk','bomDone'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',onChange);});
 document.querySelectorAll('.bom').forEach(c=>c.addEventListener('input',onChange));
 document.querySelectorAll('.prisk').forEach(c=>c.addEventListener('input',onChange));
 
@@ -730,7 +750,42 @@ function onChange(){
     else { vPath.className='verdict v-wait'; setMsg(vPath,'Confirm the route is clear'); }
   }
 
-  const g6 = openingPass && pathPass;
+  // ---- Gate 6 · condenser discharge & clearance ----
+  const vCond=$('vCond'), dt=$('discType').value, pt=$('placeTight').value;
+  $('condEval').style.display = S.config ? 'block':'none';
+  let condPass=true; // n/a until a config (outdoor unit) is known
+  if(S.config){
+    // adaptive confirm label
+    let lbl='Clearances confirmed per spec';
+    if(dt==='vertical') lbl='Overhead + coil-intake clearances meet spec';
+    else if(dt==='horizontal' && pt==='open') lbl='Discharge path + intake clearances meet spec';
+    else if(dt==='horizontal' && pt==='tight') lbl='Discharge aimed at OPEN space — not at a wall';
+    $('discOkLabel').textContent=lbl;
+    // recommendation nudge
+    const rec=$('discRec');
+    if(dt==='horizontal' && pt==='tight'){
+      rec.style.display='block';
+      rec.innerHTML='⚠ Tight spot + side discharge — aim the discharge at open space, or spec a <b>top-discharge unit</b> (lower recirculation risk here).';
+    } else if(dt==='vertical' && pt==='tight'){
+      rec.style.display='block';
+      rec.innerHTML='Top discharge suits the tight spot — still confirm overhead clearance (no eave / soffit / deck above per spec).';
+    } else { rec.style.display='none'; }
+    // verdict
+    condPass=false;
+    if(!dt||!pt){ vCond.className='verdict v-wait'; setMsg(vCond,'Select discharge type & placement'); }
+    else if(!$('discOk').checked){
+      if(dt==='horizontal' && pt==='tight'){ vCond.className='verdict v-fail'; setMsg(vCond,'Side discharge in a confined space recirculates — orient to open space or switch to top discharge'); }
+      else { vCond.className='verdict v-wait'; setMsg(vCond,'Confirm clearances'); }
+    } else {
+      vCond.className='verdict v-pass';
+      setMsg(vCond, dt==='horizontal'
+        ? (pt==='tight' ? 'Side discharge oriented to open space — cleared' : 'Side discharge — clearances met')
+        : 'Top discharge — clearances met');
+      condPass=true;
+    }
+  }
+
+  const g6 = openingPass && pathPass && condPass;
 
   // ---- per-gate completion ----
   const done={
@@ -773,6 +828,7 @@ function release(){
     ['AHRI ref', `${$('ahriRef').value} · ${$('refrig').value}`],
     ['Electrical', `${label($('bldgPower').value)} <span class="sumpass">✓ matched</span>`],
     ['Access + path', `${$('loc').value} <span class="sumpass">✓ fit + route cleared</span>`],
+    ['Condenser', S.config ? `${$('discType').value||'—'} discharge · ${$('placeTight').value||'—'} <span class="sumpass">✓</span>` : '—'],
     ['Controls', `${$('statType').value}`],
     ['Gates', `<span class="sumpass">10 / 10 cleared ✓</span>`]
   ];
